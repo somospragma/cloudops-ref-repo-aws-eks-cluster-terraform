@@ -54,6 +54,36 @@ resource "aws_eks_cluster" "this" {
     }
   }
   
+  # Configuración de Kubernetes Networking (requerido cuando Auto Mode está habilitado)
+  dynamic "kubernetes_network_config" {
+    for_each = each.value.kubernetes_network_config != null ? [each.value.kubernetes_network_config] : []
+    
+    content {
+      dynamic "elastic_load_balancing" {
+        for_each = kubernetes_network_config.value.elastic_load_balancing != null ? [kubernetes_network_config.value.elastic_load_balancing] : []
+        
+        content {
+          enabled = elastic_load_balancing.value.enabled
+        }
+      }
+    }
+  }
+  
+  # Configuración de Storage (requerido cuando Auto Mode está habilitado)
+  dynamic "storage_config" {
+    for_each = each.value.storage_config != null ? [each.value.storage_config] : []
+    
+    content {
+      dynamic "block_storage" {
+        for_each = storage_config.value.block_storage != null ? [storage_config.value.block_storage] : []
+        
+        content {
+          enabled = block_storage.value.enabled
+        }
+      }
+    }
+  }
+  
   # Configuración de logs
   enabled_cluster_log_types = each.value.create_cloudwatch_log_group ? each.value.cluster_enabled_log_types : []
   

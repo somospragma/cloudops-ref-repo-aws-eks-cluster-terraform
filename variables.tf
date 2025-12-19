@@ -30,6 +30,20 @@ variable "eks_config" {
       node_role_arn = optional(string, null)
     }), null)
     
+    # Configuración de Kubernetes Networking (requerido para Auto Mode)
+    kubernetes_network_config = optional(object({
+      elastic_load_balancing = optional(object({
+        enabled = optional(bool, false)
+      }), null)
+    }), null)
+    
+    # Configuración de Storage (requerido para Auto Mode)
+    storage_config = optional(object({
+      block_storage = optional(object({
+        enabled = optional(bool, false)
+      }), null)
+    }), null)
+    
     # Configuración de cifrado
     encryption_config = list(object({
       provider_key_arn = string
