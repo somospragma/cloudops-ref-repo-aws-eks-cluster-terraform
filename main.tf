@@ -43,6 +43,17 @@ resource "aws_eks_cluster" "this" {
     }
   }
   
+  # Configuración de Auto Mode (EKS Compute)
+  dynamic "compute_config" {
+    for_each = each.value.compute_config != null && each.value.compute_config.enabled ? [each.value.compute_config] : []
+    
+    content {
+      enabled       = compute_config.value.enabled
+      node_pools    = compute_config.value.node_pools
+      node_role_arn = compute_config.value.node_role_arn
+    }
+  }
+  
   # Configuración de logs
   enabled_cluster_log_types = each.value.create_cloudwatch_log_group ? each.value.cluster_enabled_log_types : []
   

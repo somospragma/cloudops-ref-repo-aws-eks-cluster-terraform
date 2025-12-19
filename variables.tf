@@ -23,6 +23,13 @@ variable "eks_config" {
       bootstrap_cluster_creator_admin_permissions = optional(bool, true)
     }), null)
     
+    # Configuración de Auto Mode (EKS Compute)
+    compute_config = optional(object({
+      enabled       = optional(bool, false)
+      node_pools    = optional(list(string), ["general-purpose", "system"])
+      node_role_arn = optional(string, null)
+    }), null)
+    
     # Configuración de cifrado
     encryption_config = list(object({
       provider_key_arn = string

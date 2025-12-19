@@ -103,6 +103,14 @@ eks_config = {
 - `authentication_mode`: Modo de autenticación ("API" o "API_AND_CONFIG_MAP")
 - `bootstrap_cluster_creator_admin_permissions`: Otorga permisos de administrador al creador del cluster
 
+##### Configuración de Auto Mode (EKS Compute)
+
+- `enabled`: Habilita Auto Mode para gestión automática de nodos con Karpenter
+- `node_pools`: Lista de node pools a crear (ej: ["general-purpose", "system"])
+- `node_role_arn`: ARN del rol IAM para los nodos gestionados por Auto Mode
+
+**Nota sobre Auto Mode**: Cuando Auto Mode está habilitado, EKS gestiona automáticamente la capacidad de cómputo usando Karpenter. No necesitas crear node groups manualmente. Auto Mode es ideal para cargas de trabajo que requieren escalado automático y optimización de costos.
+
 ##### Configuración de cifrado
 
 - `provider_key_arn`: ARN de la clave KMS para cifrar secretos
@@ -172,7 +180,7 @@ module "eks_cluster" {
 }
 ```
 
-### Ejemplo con configuración avanzada
+### Ejemplo con Auto Mode habilitado
 
 ```hcl
 module "eks_cluster" {
@@ -188,7 +196,7 @@ module "eks_cluster" {
   
   eks_config = {
     "main" = {
-      kubernetes_version      = "1.28"
+      kubernetes_version      = "1.31"
       vpc_id                  = "vpc-12345678"
       subnet_ids              = ["subnet-1", "subnet-2", "subnet-3"]
       cluster_role_arn        = "arn:aws:iam::123456789012:role/EksClusterRole"
@@ -207,6 +215,13 @@ module "eks_cluster" {
       access_config = {
         authentication_mode = "API_AND_CONFIG_MAP"
         bootstrap_cluster_creator_admin_permissions = true
+      }
+      
+      # ✨ Auto Mode habilitado
+      compute_config = {
+        enabled       = true
+        node_pools    = ["general-purpose", "system"]
+        node_role_arn = "arn:aws:iam::123456789012:role/EksNodeRole"
       }
       
       # Configuración de cifrado
@@ -232,6 +247,7 @@ module "eks_cluster" {
         "kubernetes.io/cluster-name" = "pragma-demo-dev-eks-main"
         "environment" = "dev"
         "criticality" = "high"
+        "auto-mode"   = "enabled"
       }
     }
   }
