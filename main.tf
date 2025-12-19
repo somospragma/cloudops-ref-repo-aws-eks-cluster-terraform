@@ -63,6 +63,9 @@ resource "aws_eks_cluster" "this" {
     }
   }
   
+  # Deshabilitar bootstrap de addons cuando Auto Mode está habilitado
+  bootstrap_self_managed_addons = each.value.compute_config != null && each.value.compute_config.enabled ? false : true
+  
 
   
   # Configuración de Storage (requerido cuando Auto Mode está habilitado)
