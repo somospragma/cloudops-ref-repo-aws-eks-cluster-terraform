@@ -15,10 +15,19 @@ resource "aws_eks_cluster" "this" {
     public_access_cidrs     = each.value.endpoint_public_access ? each.value.public_access_cidrs : null
   }
   
-  # Configuración de red de Kubernetes
+  # Configuración de red de Kubernetes (consolidado)
   kubernetes_network_config {
     ip_family         = each.value.ip_family
     service_ipv4_cidr = each.value.service_ipv4_cidr
+    
+    # Elastic Load Balancing (requerido para Auto Mode)
+    dynamic "elastic_load_balancing" {
+      for_each = each.value.kubernetes_network_config != null && each.value.kubernetes_network_config.elastic_load_balancing != null ? [each.value.kubernetes_network_config.elastic_load_balancing] : []
+      
+      content {
+        enabled = elastic_load_balancing.value.enabled
+      }
+    }
   }
   
   # Configuración avanzada de acceso
@@ -54,20 +63,7 @@ resource "aws_eks_cluster" "this" {
     }
   }
   
-  # Configuración de Kubernetes Networking (requerido cuando Auto Mode está habilitado)
-  dynamic "kubernetes_network_config" {
-    for_each = each.value.kubernetes_network_config != null ? [each.value.kubernetes_network_config] : []
-    
-    content {
-      dynamic "elastic_load_balancing" {
-        for_each = kubernetes_network_config.value.elastic_load_balancing != null ? [kubernetes_network_config.value.elastic_load_balancing] : []
-        
-        content {
-          enabled = elastic_load_balancing.value.enabled
-        }
-      }
-    }
-  }
+
   
   # Configuración de Storage (requerido cuando Auto Mode está habilitado)
   dynamic "storage_config" {
