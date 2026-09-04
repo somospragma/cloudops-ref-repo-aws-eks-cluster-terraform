@@ -1,37 +1,39 @@
-############################################################################
-# Local Transformations - PC-IAC-026
-############################################################################
-
-# Patrón de Transformación: terraform.tfvars → data.tf → locals.tf → main.tf
+###########################################
+# PC-IAC-009 — Inyección de valores dinámicos desde data sources
+# PC-IAC-021 — Centralización de configuración en locals
+# PC-IAC-025 — Nomenclatura de gobernanza procesada aquí
+# PC-IAC-026 — Patrón de Transformación: tfvars → locals → main
+#
+# Este archivo transforma var.eks_config inyectando los IDs dinámicos
+# obtenidos de los data sources en data.tf.
+# sample/main.tf SOLO consume local.eks_config_transformed.
+###########################################
 
 locals {
-  # Transformación de eks_config con inyección de IDs dinámicos
-  eks_config_with_resources = {
-    for key, config in var.eks_config :
-    key => merge(config, {
-      # Inyectar VPC ID desde data source si está vacío
-      vpc_id = length(config.vpc_id) > 0 ? config.vpc_id : data.aws_vpc.selected.id
-      
-      # Inyectar Subnet IDs desde data source si está vacío
+
+  # ── Prefijo de gobernanza ────────────────────────────────────────────────
+  # PC-IAC-025: nomenclatura construida en el Root
+  governance_prefix = "${var.client}-${var.project}-${var.environment}"
+
+  # ── Transformación del eks_config ────────────────────────────────────────
+  # PC-IAC-026: inyectar IDs dinámicos sobre la configuración base de tfvars
+  # Campos vacíos ("", []) se reemplazan con valores de data sources.
+  eks_config_transformed = {
+    for key, config in var.eks_config : key => merge(config, {
+
+      # Inyectar cluster_role_arn desde data source si viene vacío
+      cluster_role_arn = length(config.cluster_role_arn) > 0 ? config.cluster_role_arn : data.aws_iam_role.eks_cluster_role.arn
+
+      # Inyectar subnet_ids desde data source si viene vacío
       subnet_ids = length(config.subnet_ids) > 0 ? config.subnet_ids : data.aws_subnets.private.ids
-      
-      # Inyectar Cluster Role ARN desde data source si está vacío
-      cluster_role_arn = length(config.cluster_role_arn) > 0 ? config.cluster_role_arn : data.aws_iam_role.eks_cluster.arn
-      
-      # Inyectar KMS Key ARN en encryption_config si está vacío
-      encryption_config = [
-        for enc in config.encryption_config : {
-          provider_key_arn = length(enc.provider_key_arn) > 0 ? enc.provider_key_arn : data.aws_kms_key.eks_secrets.arn
-          resources        = enc.resources
-        }
-      ]
-      
-      # Inyectar Node Role ARN en compute_config si Auto Mode está habilitado
-      compute_config = config.compute_config != null && config.compute_config.enabled ? {
-        enabled       = config.compute_config.enabled
-        node_pools    = config.compute_config.node_pools
-        node_role_arn = config.compute_config.node_role_arn != null && length(config.compute_config.node_role_arn) > 0 ? config.compute_config.node_role_arn : data.aws_iam_role.eks_node.arn
-      } : null
+
+      # Inyectar configuración de cifrado KMS
+      # Se construye aquí para usar el ARN dinámico de la key
+      encryption_config = [{
+        provider_key_arn = data.aws_kms_key.eks_secrets.arn
+        resources        = ["secrets"]
+      }]
     })
   }
+
 }
