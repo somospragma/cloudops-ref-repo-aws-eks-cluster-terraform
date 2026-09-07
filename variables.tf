@@ -289,11 +289,13 @@ variable "eks_config" {
   }
 
   validation {
-    # Si Auto Mode está habilitado, node_role_arn es obligatorio
+    # Si Auto Mode está habilitado, node_role_arn es obligatorio SOLO si hay node_pools
+    # Con node_pools = [] (built-ins deshabilitados), node_role_arn debe ser null
     condition = alltrue([
       for k, v in var.eks_config : (
         v.compute_config == null ? true : (
           v.compute_config.enabled == false ? true :
+          length(coalesce(v.compute_config.node_pools, [])) == 0 ? true :
           v.compute_config.node_role_arn != null && length(v.compute_config.node_role_arn) > 0
         )
       )
